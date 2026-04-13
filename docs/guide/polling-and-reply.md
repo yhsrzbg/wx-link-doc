@@ -39,6 +39,8 @@ cursor = updates.nextCursor;
 - `msg.item_list`
   文本、图片、文件、视频等消息内容都在这里
 
+这里有一个很重要的前提：第一次开始对话时，通常也要先依赖这条入站消息把 `context_token` 带回来。也就是说，应该先让微信用户主动发来一条消息，再由服务端进入回复链路。
+
 ## 回复文本
 
 ```ts
@@ -76,7 +78,9 @@ await client.sendTextChunked(
 - `toUserId` 来自入站消息
 - `contextToken` 来自入站消息
 
-主动发起新消息时，如果拿不到 `contextToken`，是否可行要看实际环境行为。
+如果这是第一轮对话，更建议把这个前提写进你的产品逻辑：先让用户从微信发一条消息，服务端拿到 `contextToken` 后再开始聊天。
+
+主动发起新消息时，如果拿不到 `contextToken`，是否可行要看实际环境行为；不要把“无 `contextToken` 首次开聊”当成默认可靠路径。
 
 相关参考：
 

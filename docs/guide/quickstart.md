@@ -61,6 +61,8 @@ cursor = updates.nextCursor;
 
 ## 4. 回复消息
 
+> 提醒：第一次开始对话时，建议先让微信用户主动发来一条消息。服务端只有先收到入站消息，才能稳定拿到 `msg.context_token`，后续回复再把它透传回去。
+
 ```ts
 for (const msg of updates.msgs ?? []) {
   if (!msg.from_user_id) {
@@ -79,6 +81,8 @@ for (const msg of updates.msgs ?? []) {
 
 - `toUserId` 取自入站消息 `msg.from_user_id`
 - `contextToken` 取自入站消息 `msg.context_token`
+
+如果这是你和某个用户的第一轮对话，不要假设服务端一开始就知道 `contextToken`。更稳妥的做法是：先让对方从微信发来一条消息，再开始机器人回复。
 
 ## 5. 你需要自己保存的状态
 

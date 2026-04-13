@@ -2,6 +2,8 @@
 
 这页聚焦业务最常用的高层能力，也就是 `WxLinkClient`。
 
+> 提醒：如果这是和某个用户的第一轮对话，建议先让对方从微信发来一条消息。服务端拿到入站消息里的 `msg.context_token` 后，再调用 `sendText()`、`sendTyping()` 或其他回复接口会更稳妥。
+
 ## `new WxLinkClient(options)`
 
 **用途**
@@ -182,6 +184,8 @@ client.sendText(options: SendTextOptions): Promise<{ messageId: string }>
 
 - `toUserId` 最常见来源是入站消息 `msg.from_user_id`
 - `contextToken` 最常见来源是入站消息 `msg.context_token`
+
+如果是首次会话，建议把“先收到一条用户消息，再回复”作为默认流程，而不是依赖没有 `contextToken` 的主动开聊。
 
 **最小示例**
 
