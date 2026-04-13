@@ -27,6 +27,16 @@ features:
 - [Guide 总览](/guide/)
 - [API Reference 首页](/api/)
 
+## 安装
+
+```bash
+npm i wx-link
+```
+
+如果你要继续看最短接入链路，直接去：
+
+- [快速接入](/guide/quickstart)
+
 ## 推荐阅读顺序
 
 1. [快速接入](/guide/quickstart)
