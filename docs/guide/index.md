@@ -2,6 +2,11 @@
 
 这一组文档聚焦 `wx-link` 的接入流程、状态保存和关键字段来源。
 
+## 演示 Demo
+
+- [wx-link-web-demo](https://github.com/yhsrzbg/wx-link-web-demo)
+  一个基于 `wx-link` 的示例项目，适合拿来参考微信机器人、消息桥接和基础接入方式。
+
 ## 推荐先读
 
 - [快速接入](./quickstart.md)

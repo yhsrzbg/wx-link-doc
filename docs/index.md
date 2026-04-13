@@ -13,6 +13,9 @@ hero:
       text: 使用场景
       link: /#use-cases
     - theme: alt
+      text: 演示 Demo
+      link: https://github.com/yhsrzbg/wx-link-web-demo
+    - theme: alt
       text: API Reference
       link: /api/
 
