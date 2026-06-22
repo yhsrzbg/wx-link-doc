@@ -11,11 +11,14 @@
 | `DEFAULT_BOT_TYPE` | 默认 bot 类型 |
 | `DEFAULT_APP_ID` | 默认请求头 app id |
 | `DEFAULT_CHANNEL_VERSION` | 默认 channel version |
+| `DEFAULT_BOT_AGENT` | 默认 `bot_agent` 值（`0.2.0+`） |
 | `MessageType` | 消息主体类型枚举 |
 | `MessageItemType` | 消息内容项类型枚举 |
 | `MessageState` | 消息状态枚举 |
 | `TypingStatus` | typing 状态枚举 |
 | `UploadMediaType` | 上传媒体类型枚举 |
+| `sanitizeBotAgent` | 把 `botAgent` 清洗为合法 UA 风格字符串（`0.2.0+`） |
+| `buildClientVersion` | 把版本号字符串编码为整型 client version（`0.2.0+`） |
 
 这些常量主要在 low-level API 或自定义协议封装中使用。
 

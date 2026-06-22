@@ -59,7 +59,43 @@ const result = await pollQrLoginSession({ session });
 - `confirmed`
 - `expired`
 
+`0.2.0` 起还可能出现 `need_verifycode`、`verify_code_blocked`、`binded_redirect`，详见下方“配对码登录”。
+
 高层 `loginWithQR()` 会把它们整理成更适合 UI 的状态回调，例如 `waiting`、`scanned`、`expired`、`refreshing`。
+
+## 配对码登录（`0.2.0+`）
+
+有些情况下，服务端会在扫码后要求输入手机微信上显示的数字（配对码），底层状态会出现 `need_verifycode`。用 `loginWithQR()` 时，只要提供 `onVerifyCode` 回调即可，SDK 会把数字带入下一次轮询，输入错误时会再次回调（`retry: true`）：
+
+```ts
+const login = await loginWithQR({
+  onQRCode: (url) => renderQr(url),
+  onVerifyCode: async ({ retry }) => {
+    return await promptUser(retry ? "配对码不匹配，请重新输入" : "请输入手机微信显示的数字");
+  },
+});
+```
+
+如果你在用显式状态机，则在收到 `need_verifycode` 后，于下一次 `pollQrLoginSession()` 传入 `verifyCode`：
+
+```ts
+let result = await pollQrLoginSession({ session });
+if (result.status === "need_verifycode") {
+  const code = await promptUser("请输入手机微信显示的数字");
+  result = await pollQrLoginSession({ session: result.session, verifyCode: code });
+}
+```
+
+相关状态：
+
+- `need_verifycode`
+  服务端要求配对码，应展示提示并在下次轮询传入 `verifyCode`
+- `verify_code_blocked`
+  配对码错误次数过多；`pollQrLoginSession()` 会自动刷新二维码，并以可继续的 `expired` 结果返回
+- `binded_redirect`
+  该 bot 已绑定过此应用，显式状态机将收到 `done: true`、`alreadyConnected: true`，可按“无需重复连接”处理；高层 `loginWithQR()` 当前会抛出对应错误
+
+> 获取二维码时还可以传入 `localTokenList`（本地已有的 bot token，最多 10 个），让服务端识别已绑定的 bot 并返回 `binded_redirect`。
 
 ## `redirect_host` 是什么
 

@@ -14,6 +14,7 @@ export default defineConfig({
       { text: "首页", link: "/" },
       { text: "Guide", link: "/guide/" },
       { text: "API Reference", link: "/api/" },
+      { text: "Changelog", link: "/changelog" },
     ],
     sidebar: {
       "/guide/": [
@@ -40,6 +41,12 @@ export default defineConfig({
             { text: "底层协议 API", link: "/api/protocol" },
             { text: "参考索引", link: "/api/reference" },
           ],
+        },
+      ],
+      "/changelog": [
+        {
+          text: "Changelog",
+          items: [{ text: "版本变更", link: "/changelog" }],
         },
       ],
     },

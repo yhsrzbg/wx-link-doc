@@ -27,10 +27,13 @@ new WxLinkClient(options: ClientOptions)
 | `baseUrl` | `string` | API 地址 |
 | `token` | `string` | bot token |
 | `cdnBaseUrl` | `string` | 媒体 CDN 地址，可选 |
+| `botAgent` | `string` | UA 风格的上游应用标识，作为 `base_info.bot_agent` 随每个请求发送，可选（`0.2.0+`） |
 | `fetchImpl` | `typeof fetch` | 自定义 `fetch`，可选 |
 | `logger` | `LoggerLike` | 自定义日志对象，可选 |
 
 更多参数见 [参考索引](./reference.md) 的类型入口。
+
+> `botAgent` 形如 `"my-app/1.2.3 (prod)"`，会经 `sanitizeBotAgent` 清洗为合法格式；省略或非法时回退为 `"wx-link"`。
 
 **返回值**
 
