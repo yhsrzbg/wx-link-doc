@@ -21,7 +21,7 @@ hero:
 
 features:
   - title: 封装一个微信 webhook
-    details: 用 poll 拉消息，再转成你的 HTTP webhook、队列事件或业务命令，让企业微信机器人能力接进现有后端。
+    details: 用 poll 拉取微信 iLink 机器人消息，再转成你的 HTTP webhook、队列事件或业务命令，接进现有后端。
   - title: 做一个能在微信里聊天的 Agent
     details: 把入站消息接到你自己的 LLM 或 Agent runtime，生成结果后再通过 wx-link 发回微信。
   - title: 挂接 Claude Code 或自动化工作流

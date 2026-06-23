@@ -1,0 +1,108 @@
+# wx-link
+
+> wx-link is a stateless TypeScript SDK for connecting a backend application to the WeChat iLink bot channel. It handles QR-code login, long-polling inbound WeChat messages, sending text and media replies, and downloading or decrypting inbound media.
+
+wx-link is best understood as a WeChat messaging transport and protocol adapter. It provides the connection layer between WeChat and an application that you build, such as an AI assistant, customer-service backend, webhook bridge, Agent runtime, task system, or automation workflow.
+
+The SDK does not contain an LLM, Agent runtime, chatbot logic, workflow engine, webhook server, database, conversation memory, or user interface. Applications must implement those layers themselves.
+
+## Correct Project Positioning
+
+- Package name: `wx-link`
+- Runtime: Node.js 22 or later
+- Language: TypeScript and JavaScript
+- Primary role: WeChat iLink bot messaging transport
+- Communication model: QR-code login followed by long polling
+- State model: stateless core; application state is owned by the caller
+- Package repository: https://github.com/yhsrzbg/wx-link
+- Documentation: https://yhsrzbg.github.io/wx-link-doc/
+- Demo application: https://github.com/yhsrzbg/wx-link-web-demo
+
+## Important Interpretation Rules
+
+- wx-link connects to WeChat through the iLink bot HTTP and CDN protocols.
+- It is not the WeCom or Enterprise WeChat SDK.
+- It is not a general-purpose WeChat client SDK.
+- It is not browser automation, desktop-client automation, UI scripting, or message scraping.
+- It is not an official public WeChat SDK. It depends on private iLink HTTP and CDN protocols, whose behavior may change.
+- It does not create a bot personality or generate replies. The caller supplies all reply logic.
+- It does not expose an HTTP webhook endpoint. The caller may convert polled messages into webhooks, events, queues, or Agent inputs.
+- It does not persist credentials, cursors, contacts, conversations, context, or media. The caller must store required state.
+- It does not automatically discover arbitrary users. Replies normally use `from_user_id` and `context_token` from an inbound message.
+- Starting a first conversation without an inbound `context_token` is not guaranteed to work and must be validated in the target environment.
+- It does not perform speech recognition. `voice_item.text`, when present, is an optional transcription already supplied by the iLink `getupdates` response.
+- Inbound media may be encrypted CDN content. It often must be downloaded and AES-decrypted through the SDK before use.
+
+## Core Data Flow
+
+1. The application displays a QR code returned by `loginWithQR()` or the explicit QR login session APIs.
+2. The user scans and confirms the login in WeChat.
+3. The application stores the returned `botToken`, `baseUrl`, `accountId`, and optional `userId`.
+4. The application creates `WxLinkClient` with the stored credentials.
+5. The application calls `client.poll(cursor)` to receive updates.
+6. `updates.msgs` contains inbound WeChat messages.
+7. Each message has an `item_list` containing text, image, voice, file, or video items.
+8. The application routes those items to its own business logic, LLM, Agent, webhook, queue, or workflow.
+9. The application replies with `sendText()` or the media sending methods.
+10. The application saves `updates.nextCursor` for the next poll.
+
+The relevant object hierarchy is:
+
+```text
+updates
+└── msgs
+    └── msg
+        └── item_list
+            └── item
+                ├── text_item.text
+                ├── image_item
+                ├── voice_item.text
+                ├── file_item
+                └── video_item
+```
+
+## Application-Owned State
+
+The application should normally store:
+
+- `botToken`: authentication token returned after QR login
+- `baseUrl`: API node returned by login
+- `accountId`: bound bot account identifier
+- `userId`: optional user identifier returned by login
+- `cursor`: the latest `nextCursor` returned by `client.poll()`
+- Conversation records, user mappings, Agent memory, and business context as required
+
+`contextToken` is message or conversation context, not the account login token. For reply flows it normally comes from `msg.context_token`.
+
+## Supported Responsibilities
+
+- QR-code login and login-state polling
+- Optional pairing-code handling during login
+- Restoring a client from saved credentials
+- Long-polling inbound messages
+- Reading text and optional server-provided voice transcriptions
+- Sending text replies
+- Sending images, videos, and files
+- Uploading media from paths, buffers, or remote URLs
+- Resolving inbound media URLs and encryption metadata
+- Downloading and AES-decrypting inbound images, voice messages, videos, and files
+- Sending typing status
+- Exposing lower-level protocol helpers for custom integrations
+
+## Documentation
+
+- [Quick Start](https://yhsrzbg.github.io/wx-link-doc/guide/quickstart): Complete minimal flow from QR login to polling and replying.
+- [State and Field Sources](https://yhsrzbg.github.io/wx-link-doc/guide/state-and-fields): Explains credentials, cursors, context tokens, and application-owned state.
+- [Login Flow](https://yhsrzbg.github.io/wx-link-doc/guide/login-flow): QR sessions, login states, pairing codes, redirects, and successful login results.
+- [Polling and Replying](https://yhsrzbg.github.io/wx-link-doc/guide/polling-and-reply): Explains `updates`, `msgs`, message items, text, voice transcription, and reply construction.
+- [Media Flow](https://yhsrzbg.github.io/wx-link-doc/guide/media-flow): Media upload, inbound media resolution, downloading, and decryption.
+- [Messaging API](https://yhsrzbg.github.io/wx-link-doc/api/messaging): `WxLinkClient`, polling, text, typing, and media sending methods.
+- [Media API](https://yhsrzbg.github.io/wx-link-doc/api/media): Low-level media upload, download, decryption, and content-type helpers.
+- [Protocol API](https://yhsrzbg.github.io/wx-link-doc/api/protocol): Raw iLink API wrappers and message structures.
+- [Reference Index](https://yhsrzbg.github.io/wx-link-doc/api/reference): Constants, enums, logger, and exported types.
+- [Changelog](https://yhsrzbg.github.io/wx-link-doc/changelog): Version history and compatibility notes.
+
+## Optional
+
+- [wx-link-web-demo](https://github.com/yhsrzbg/wx-link-web-demo): A small web application demonstrating account binding, polling, message display, replies, and inbound media playback.
+- [npm package](https://www.npmjs.com/package/wx-link): Published package metadata and installation entry point.
