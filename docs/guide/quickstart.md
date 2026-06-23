@@ -42,6 +42,12 @@ const client = new WxLinkClient({
 如果你是从数据库恢复账号，也可以这样创建：
 
 ```ts
+// saved 是你的应用从数据库或状态文件中读取的账号记录
+declare const saved: {
+  baseUrl: string;
+  botToken: string;
+};
+
 const client = WxLinkClient.fromAccount({
   baseUrl: saved.baseUrl,
   token: saved.botToken,
@@ -51,7 +57,8 @@ const client = WxLinkClient.fromAccount({
 ## 3. 轮询消息
 
 ```ts
-let cursor = saved.cursor ?? "";
+// 首次登录可以从空游标开始；恢复运行时应读取上次保存的游标
+let cursor = "";
 
 const updates = await client.poll(cursor);
 cursor = updates.nextCursor;
@@ -64,6 +71,7 @@ cursor = updates.nextCursor;
 > 提醒：第一次开始对话时，建议先让微信用户主动发来一条消息。服务端只有先收到入站消息，才能稳定拿到 `msg.context_token`，后续回复再把它透传回去。
 
 ```ts
+// msg 是本次 poll() 返回的 updates.msgs 中的一条消息
 for (const msg of updates.msgs ?? []) {
   if (!msg.from_user_id) {
     continue;

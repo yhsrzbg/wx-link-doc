@@ -47,9 +47,13 @@ new WxLinkClient(options: ClientOptions)
 **最小示例**
 
 ```ts
+const login = await loginWithQR({
+  onQRCode: (url) => console.log(url),
+});
+
 const client = new WxLinkClient({
-  baseUrl: saved.baseUrl,
-  token: saved.botToken,
+  baseUrl: login.baseUrl,
+  token: login.botToken,
 });
 ```
 
@@ -97,9 +101,17 @@ WxLinkClient.fromAccount(
 **最小示例**
 
 ```ts
+// savedAccount 是你的应用从数据库或状态文件中读取的账号记录
+declare const savedAccount: {
+  baseUrl: string;
+  token: string;
+  cdnBaseUrl?: string;
+};
+
 const client = WxLinkClient.fromAccount({
-  baseUrl: saved.baseUrl,
-  token: saved.botToken,
+  baseUrl: savedAccount.baseUrl,
+  token: savedAccount.token,
+  cdnBaseUrl: savedAccount.cdnBaseUrl,
 });
 ```
 
@@ -145,8 +157,14 @@ interface PollUpdatesResult extends GetUpdatesResp {
 **最小示例**
 
 ```ts
+// 首次运行传空字符串；恢复运行时改成上次保存的 nextCursor
+let cursor = "";
 const updates = await client.poll(cursor);
 cursor = updates.nextCursor;
+
+for (const msg of updates.msgs ?? []) {
+  console.log(msg.from_user_id, msg.item_list);
+}
 ```
 
 **相关 Guide**
@@ -193,11 +211,18 @@ client.sendText(options: SendTextOptions): Promise<{ messageId: string }>
 **最小示例**
 
 ```ts
-await client.sendText({
-  toUserId: msg.from_user_id!,
-  text: "hello",
-  contextToken: msg.context_token,
-});
+// 空字符串表示首次轮询；实际应用应传入已保存的 cursor
+const updates = await client.poll("");
+
+for (const msg of updates.msgs ?? []) {
+  if (!msg.from_user_id) continue;
+
+  await client.sendText({
+    toUserId: msg.from_user_id,
+    text: "hello",
+    contextToken: msg.context_token,
+  });
+}
 ```
 
 **相关 Guide**
@@ -245,7 +270,13 @@ client.sendTextChunked(
 **最小示例**
 
 ```ts
-await client.sendTextChunked(msg.from_user_id!, longText, msg.context_token);
+const longText = "这里放需要自动拆分的长文本";
+const updates = await client.poll("");
+
+for (const msg of updates.msgs ?? []) {
+  if (!msg.from_user_id) continue;
+  await client.sendTextChunked(msg.from_user_id, longText, msg.context_token);
+}
 ```
 
 **相关 Guide**
@@ -286,7 +317,12 @@ client.sendTyping(userId: string, contextToken?: string): Promise<void>
 **最小示例**
 
 ```ts
-await client.sendTyping(msg.from_user_id!, msg.context_token);
+const updates = await client.poll("");
+
+for (const msg of updates.msgs ?? []) {
+  if (!msg.from_user_id) continue;
+  await client.sendTyping(msg.from_user_id, msg.context_token);
+}
 ```
 
 **相关 Guide**
@@ -335,11 +371,17 @@ client.sendFile(options: SendMediaByPathOptions): Promise<{ messageId: string }>
 **最小示例**
 
 ```ts
-await client.sendImage({
-  toUserId: msg.from_user_id!,
-  filePath: "./demo.jpg",
-  contextToken: msg.context_token,
-});
+const updates = await client.poll("");
+
+for (const msg of updates.msgs ?? []) {
+  if (!msg.from_user_id) continue;
+
+  await client.sendImage({
+    toUserId: msg.from_user_id,
+    filePath: "./demo.jpg",
+    contextToken: msg.context_token,
+  });
+}
 ```
 
 **相关 Guide**
@@ -379,9 +421,17 @@ client.sendMediaFromPath(options: SendMediaByPathOptions): Promise<{ messageId: 
 **最小示例**
 
 ```ts
+const updates = await client.poll("");
+const msg = updates.msgs?.find((message) => message.from_user_id);
+
+if (!msg?.from_user_id) {
+  throw new Error("本轮没有可回复的入站消息");
+}
+
 await client.sendMediaFromPath({
-  toUserId,
+  toUserId: msg.from_user_id,
   filePath: "./demo.mp4",
+  contextToken: msg.context_token,
 });
 ```
 
@@ -432,10 +482,21 @@ client.sendMediaFromBuffer(options: SendMediaByBufferOptions): Promise<{ message
 **最小示例**
 
 ```ts
+import { readFile } from "node:fs/promises";
+
+const updates = await client.poll("");
+const msg = updates.msgs?.find((message) => message.from_user_id);
+const buffer = await readFile("./demo.jpg");
+
+if (!msg?.from_user_id) {
+  throw new Error("本轮没有可回复的入站消息");
+}
+
 await client.sendMediaFromBuffer({
-  toUserId,
+  toUserId: msg.from_user_id,
   buffer,
   fileName: "demo.jpg",
+  contextToken: msg.context_token,
 });
 ```
 
@@ -481,9 +542,17 @@ client.sendMediaFromUrl(options: SendMediaByUrlOptions): Promise<{ messageId: st
 **最小示例**
 
 ```ts
+const updates = await client.poll("");
+const msg = updates.msgs?.find((message) => message.from_user_id);
+
+if (!msg?.from_user_id) {
+  throw new Error("本轮没有可回复的入站消息");
+}
+
 await client.sendMediaFromUrl({
-  toUserId,
+  toUserId: msg.from_user_id,
   url: "https://example.com/demo.jpg",
+  contextToken: msg.context_token,
 });
 ```
 
@@ -531,7 +600,13 @@ interface GetConfigResp {
 **最小示例**
 
 ```ts
-const config = await client.getConfig(msg.from_user_id!, msg.context_token);
+const updates = await client.poll("");
+const msg = updates.msgs?.find((message) => message.from_user_id);
+
+if (msg?.from_user_id) {
+  const config = await client.getConfig(msg.from_user_id, msg.context_token);
+  console.log(config.typing_ticket);
+}
 ```
 
 **相关 Guide**

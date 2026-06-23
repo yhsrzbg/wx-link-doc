@@ -71,7 +71,7 @@ const logger = createLogger({ level: "debug" });
 - 登录相关
   `LoginCallbacks`、`LoginResult`、`QrLoginSession`、`PollQrLoginSessionResult`
 - 轮询和消息
-  `GetUpdatesReq`、`GetUpdatesResp`、`PollUpdatesResult`、`WeixinMessage`、`MessageItem`
+  `GetUpdatesReq`、`GetUpdatesResp`、`PollUpdatesResult`、`WeixinMessage`、`MessageItem`、`TextItem`、`ImageItem`、`VoiceItem`、`FileItem`、`VideoItem`
 - 上传和媒体
   `GetUploadUrlReq`、`GetUploadUrlResp`、`UploadedFileInfo`、`ResolvedInboundMedia`、`DownloadedInboundMedia`
 - 配置和 typing
@@ -83,3 +83,5 @@ const logger = createLogger({ level: "debug" });
 - [收发消息 API](./messaging.md)
 - [媒体 API](./media.md)
 - [底层协议 API](./protocol.md)
+
+其中 `VoiceItem.text` 是可选的服务端语音转写结果。SDK 不会自行执行 ASR；字段缺失时仍可通过入站媒体 API 下载并解密语音。

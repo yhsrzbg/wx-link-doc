@@ -65,6 +65,7 @@ const login = await loginWithQR({
   onQRCode: (url) => console.log(url),
   onVerifyCode: async ({ retry }) => {
     console.log(retry ? "配对码不匹配，请重新输入" : "请输入手机微信显示的数字");
+    // readLineFromSomewhere 代表你的 CLI、网页表单或其他用户输入实现
     return await readLineFromSomewhere();
   },
 });
@@ -201,6 +202,7 @@ interface PollQrLoginSessionResult {
 **最小示例**
 
 ```ts
+let session = await createQrLoginSession();
 const result = await pollQrLoginSession({ session });
 session = result.session;
 ```
@@ -327,6 +329,7 @@ interface QRStatusResponse {
 **最小示例**
 
 ```ts
+const session = await createQrLoginSession();
 const status = await pollQrStatus(session.qrcode, session.currentApiBaseUrl);
 ```
 

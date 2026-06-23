@@ -45,9 +45,15 @@ ApiContext
 **最小示例**
 
 ```ts
+// savedAccount 是你的应用从数据库或状态文件中读取的账号记录
+declare const savedAccount: {
+  baseUrl: string;
+  botToken: string;
+};
+
 const ctx = createApiContext({
-  baseUrl: saved.baseUrl,
-  token: saved.botToken,
+  baseUrl: savedAccount.baseUrl,
+  token: savedAccount.botToken,
 });
 ```
 
@@ -98,10 +104,73 @@ interface GetUpdatesResp {
 
 - `get_updates_buf` 的典型来源是上一次轮询返回值
 
+### 入站消息内容
+
+`msgs` 中的每条 `WeixinMessage` 通过 `item_list` 携带实际内容：
+
+```ts
+interface MessageItem {
+  type?: number;
+  text_item?: { text?: string };
+  image_item?: ImageItem;
+  voice_item?: VoiceItem;
+  file_item?: FileItem;
+  video_item?: VideoItem;
+}
+```
+
+常见 `type`：
+
+| 值 | 常量 | 内容字段 |
+| --- | --- | --- |
+| `1` | `MessageItemType.TEXT` | `text_item` |
+| `2` | `MessageItemType.IMAGE` | `image_item` |
+| `3` | `MessageItemType.VOICE` | `voice_item` |
+| `4` | `MessageItemType.FILE` | `file_item` |
+| `5` | `MessageItemType.VIDEO` | `video_item` |
+
+语音项的结构：
+
+```ts
+interface VoiceItem {
+  media?: CDNMedia;
+  encode_type?: number;
+  bits_per_sample?: number;
+  sample_rate?: number;
+  playtime?: number;
+  text?: string;
+  url?: string;
+  cdn_url?: string;
+}
+```
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `media` | `CDNMedia` | 语音 CDN 引用，可能包含下载参数和 AES key |
+| `encode_type` | `number` | 音频编码类型，由服务端返回 |
+| `bits_per_sample` | `number` | 音频位深 |
+| `sample_rate` | `number` | 采样率，单位 Hz |
+| `playtime` | `number` | 播放时长，单位毫秒 |
+| `text` | `string` | 可选的语音转文字结果 |
+| `url` / `cdn_url` | `string` | 某些响应中可能提供的直接媒体地址 |
+
+`voice_item.text` 直接来自 `getupdates` 的 JSON 响应。`getUpdates()` 和 `client.poll()` 不会执行语音识别，只会解析并返回该字段。协议也不保证每条语音都包含 `text`。
+
 **最小示例**
 
 ```ts
+// 首次轮询传空字符串；后续传上一次响应里的 get_updates_buf
+let cursor = "";
 const resp = await getUpdates(ctx, { get_updates_buf: cursor });
+cursor = resp.get_updates_buf ?? cursor;
+
+for (const msg of resp.msgs ?? []) {
+  for (const item of msg.item_list ?? []) {
+    if (item.type === MessageItemType.VOICE) {
+      console.log(item.voice_item?.text ?? "没有服务端转写");
+    }
+  }
+}
 ```
 
 **相关 Guide**
@@ -152,13 +221,21 @@ sendMessage(opts: ApiContext | ClientOptions, body: SendMessageReq): Promise<voi
 **最小示例**
 
 ```ts
+const updates = await getUpdates(ctx, { get_updates_buf: "" });
+const inbound = updates.msgs?.find((message) => message.from_user_id);
+
+if (!inbound?.from_user_id) {
+  throw new Error("尚未收到可回复的入站消息");
+}
+
 await sendMessage(ctx, {
   msg: {
     from_user_id: "",
-    to_user_id: toUserId,
+    to_user_id: inbound.from_user_id,
     client_id: "custom-id",
     message_type: MessageType.BOT,
     message_state: MessageState.FINISH,
+    context_token: inbound.context_token,
     item_list: [{ type: MessageItemType.TEXT, text_item: { text: "hello" } }],
   },
 });
@@ -206,9 +283,21 @@ sendTyping(
 **最小示例**
 
 ```ts
+const updates = await getUpdates(ctx, { get_updates_buf: "" });
+const inbound = updates.msgs?.find((message) => message.from_user_id);
+
+if (!inbound?.from_user_id) {
+  throw new Error("尚未收到可回复的入站消息");
+}
+
+const config = await getConfig(ctx, inbound.from_user_id, inbound.context_token);
+if (!config.typing_ticket) {
+  throw new Error("服务端没有返回 typing_ticket");
+}
+
 await sendTyping(ctx, {
-  ilink_user_id: toUserId,
-  typing_ticket,
+  ilink_user_id: inbound.from_user_id,
+  typing_ticket: config.typing_ticket,
   status: TypingStatus.TYPING,
 });
 ```
@@ -262,7 +351,17 @@ interface GetConfigResp {
 **最小示例**
 
 ```ts
-const config = await getConfig(ctx, toUserId, contextToken);
+const updates = await getUpdates(ctx, { get_updates_buf: "" });
+const inbound = updates.msgs?.find((message) => message.from_user_id);
+
+if (inbound?.from_user_id) {
+  const config = await getConfig(
+    ctx,
+    inbound.from_user_id,
+    inbound.context_token,
+  );
+  console.log(config.typing_ticket);
+}
 ```
 
 **相关 Guide**
@@ -321,6 +420,14 @@ interface GetUploadUrlResp {
 **最小示例**
 
 ```ts
+// 下列字段由你的上传准备逻辑计算；toUserId 通常来自入站消息 from_user_id。
+declare const filekey: string;
+declare const toUserId: string;
+declare const rawsize: number;
+declare const rawfilemd5: string;
+declare const filesize: number;
+declare const aeskey: string;
+
 const uploadInfo = await getUploadUrl(ctx, {
   filekey,
   media_type: UploadMediaType.IMAGE,

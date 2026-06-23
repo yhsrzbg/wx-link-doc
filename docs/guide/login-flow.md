@@ -11,7 +11,7 @@
 
 ```ts
 const login = await loginWithQR({
-  onQRCode: (url) => renderQr(url),
+  onQRCode: (url) => console.log("请展示这个二维码地址：", url),
   onStatusChange: (status) => console.log(status),
 });
 ```
@@ -30,10 +30,11 @@ const login = await loginWithQR({
 适合服务端自己管理登录流程、轮询状态和二维码刷新。
 
 ```ts
-const session = await createQrLoginSession();
-renderQr(session.qrcodeUrl);
+let session = await createQrLoginSession();
+console.log("请展示这个二维码地址：", session.qrcodeUrl);
 
 const result = await pollQrLoginSession({ session });
+session = result.session;
 ```
 
 这条链路里常见字段的职责是：
@@ -69,8 +70,9 @@ const result = await pollQrLoginSession({ session });
 
 ```ts
 const login = await loginWithQR({
-  onQRCode: (url) => renderQr(url),
+  onQRCode: (url) => console.log("请展示这个二维码地址：", url),
   onVerifyCode: async ({ retry }) => {
+    // promptUser 代表你的 CLI、网页表单或其他用户输入实现
     return await promptUser(retry ? "配对码不匹配，请重新输入" : "请输入手机微信显示的数字");
   },
 });
@@ -79,8 +81,11 @@ const login = await loginWithQR({
 如果你在用显式状态机，则在收到 `need_verifycode` 后，于下一次 `pollQrLoginSession()` 传入 `verifyCode`：
 
 ```ts
+let session = await createQrLoginSession();
 let result = await pollQrLoginSession({ session });
+
 if (result.status === "need_verifycode") {
+  // promptUser 代表你的 CLI、网页表单或其他用户输入实现
   const code = await promptUser("请输入手机微信显示的数字");
   result = await pollQrLoginSession({ session: result.session, verifyCode: code });
 }

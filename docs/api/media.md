@@ -54,6 +54,24 @@ const remote = await downloadRemoteMedia({ url: "https://example.com/demo.jpg" }
 
 ## 上传 helper
 
+下面几个 low-level 上传示例会使用 `ctx` 和 `toUserId`。它们的典型来源如下：
+
+```ts
+const ctx = createApiContext({
+  baseUrl: process.env.WX_LINK_BASE_URL!,
+  token: process.env.WX_LINK_BOT_TOKEN!,
+});
+
+const updates = await getUpdates(ctx, { get_updates_buf: "" });
+const msg = updates.msgs?.find((message) => message.from_user_id);
+
+if (!msg?.from_user_id) {
+  throw new Error("尚未收到可回复的入站消息");
+}
+
+const toUserId = msg.from_user_id;
+```
+
 ### `uploadImageToWeixin(params)` / `uploadVideoToWeixin(params)` / `uploadFileToWeixin(params)`
 
 **用途**
@@ -151,6 +169,10 @@ uploadFileBufferToWeixin(params): Promise<UploadedFileInfo>
 **最小示例**
 
 ```ts
+import { readFile } from "node:fs/promises";
+
+const buffer = await readFile("./demo.jpg");
+
 const uploaded = await uploadImageBufferToWeixin({
   ctx,
   buffer,
@@ -211,6 +233,12 @@ uploadBufferToCdn(params: {
 **最小示例**
 
 ```ts
+// 这些值来自上传前的文件计算和 getUploadUrl() 响应。
+declare const buffer: Buffer;
+declare const filekey: string;
+declare const aesKey: Buffer;
+declare const uploadParam: string;
+
 const uploaded = await uploadBufferToCdn({
   buffer,
   uploadParam,
@@ -224,6 +252,19 @@ const uploaded = await uploadBufferToCdn({
 - [媒体流程](../guide/media-flow.md)
 
 ## 入站媒体 helper
+
+入站 helper 的 `item` 来自 `client.poll()` 返回的消息内容：
+
+```ts
+// 空字符串表示首次轮询；实际应用应传入已保存的 cursor
+const updates = await client.poll("");
+
+for (const msg of updates.msgs ?? []) {
+  for (const item of msg.item_list ?? []) {
+    console.log(item.type);
+  }
+}
+```
 
 ### `resolveInboundMedia(item, options?)`
 
@@ -261,11 +302,21 @@ ResolvedInboundMedia | null
 
 - 下载地址来自入站消息原始 URL、CDN URL 或 `encrypt_query_param`
 - `aesKeyBase64` 来自消息体里的媒体 key
+- 图片、语音、文件和视频都可以通过该方法解析
 
 **最小示例**
 
 ```ts
-const media = resolveInboundMedia(item);
+const updates = await client.poll("");
+
+for (const msg of updates.msgs ?? []) {
+  for (const item of msg.item_list ?? []) {
+    const media = resolveInboundMedia(item);
+    if (media) {
+      console.log(media.type, media.url);
+    }
+  }
+}
 ```
 
 **相关 Guide**
@@ -308,11 +359,21 @@ DownloadedInboundMedia | null
 **关键字段来源**
 
 - 解密所需的媒体 key 来自消息体
+- 语音消息的 `voice_item.text` 是独立的可选转写字段，不由下载或解密过程生成
 
 **最小示例**
 
 ```ts
-const downloaded = await downloadInboundMedia(item);
+const updates = await client.poll("");
+
+for (const msg of updates.msgs ?? []) {
+  for (const item of msg.item_list ?? []) {
+    const downloaded = await downloadInboundMedia(item);
+    if (downloaded) {
+      console.log(downloaded.contentType, downloaded.buffer.length);
+    }
+  }
+}
 ```
 
 **相关 Guide**
@@ -358,9 +419,16 @@ DownloadedInboundMedia
 **最小示例**
 
 ```ts
-const resolved = resolveInboundMedia(item);
-if (resolved) {
-  const downloaded = await downloadResolvedInboundMedia(resolved);
+const updates = await client.poll("");
+
+for (const msg of updates.msgs ?? []) {
+  for (const item of msg.item_list ?? []) {
+    const resolved = resolveInboundMedia(item);
+    if (resolved) {
+      const downloaded = await downloadResolvedInboundMedia(resolved);
+      console.log(downloaded.contentType, downloaded.buffer.length);
+    }
+  }
 }
 ```
 
@@ -404,7 +472,18 @@ buildCdnDownloadUrl(encryptedQueryParam: string, cdnBaseUrl?: string): string
 **最小示例**
 
 ```ts
-const url = buildCdnDownloadUrl(encryptedQueryParam);
+// msg 是 updates.msgs 中的一条消息
+declare const msg: WeixinMessage;
+
+const voiceItem = msg.item_list?.find(
+  (item) => item.type === MessageItemType.VOICE,
+);
+const encryptedQueryParam = voiceItem?.voice_item?.media?.encrypt_query_param;
+
+if (encryptedQueryParam) {
+  const url = buildCdnDownloadUrl(encryptedQueryParam);
+  console.log(url);
+}
 ```
 
 **相关 Guide**
@@ -444,7 +523,18 @@ parseInboundAesKey(aesKeyBase64: string): Buffer
 **最小示例**
 
 ```ts
-const key = parseInboundAesKey(aesKeyBase64);
+// msg 是 updates.msgs 中的一条消息
+declare const msg: WeixinMessage;
+
+const voiceItem = msg.item_list?.find(
+  (item) => item.type === MessageItemType.VOICE,
+);
+const aesKeyBase64 = voiceItem?.voice_item?.media?.aes_key;
+
+if (aesKeyBase64) {
+  const key = parseInboundAesKey(aesKeyBase64);
+  console.log(key.length);
+}
 ```
 
 ### `decryptInboundMedia(ciphertext, aesKeyBase64)`
@@ -482,7 +572,17 @@ decryptInboundMedia(ciphertext: Buffer, aesKeyBase64: string): Buffer
 **最小示例**
 
 ```ts
-const plaintext = decryptInboundMedia(ciphertext, aesKeyBase64);
+// item 是 msg.item_list 中的一项
+declare const item: MessageItem;
+
+const resolved = resolveInboundMedia(item);
+
+if (resolved?.aesKeyBase64) {
+  const response = await fetch(resolved.url);
+  const ciphertext = Buffer.from(await response.arrayBuffer());
+  const plaintext = decryptInboundMedia(ciphertext, resolved.aesKeyBase64);
+  console.log(plaintext.length);
+}
 ```
 
 ### `detectMediaContentType(buffer, fallbackType?)`
@@ -515,5 +615,13 @@ detectMediaContentType(buffer: Buffer, fallbackType?: string): string
 **最小示例**
 
 ```ts
-const contentType = detectMediaContentType(buffer);
+// item 是 msg.item_list 中的一项
+declare const item: MessageItem;
+
+const downloaded = await downloadInboundMedia(item);
+
+if (downloaded) {
+  const contentType = detectMediaContentType(downloaded.buffer);
+  console.log(contentType);
+}
 ```
