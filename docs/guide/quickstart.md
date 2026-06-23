@@ -105,3 +105,4 @@ for (const msg of updates.msgs ?? []) {
 - [状态与关键字段](./state-and-fields.md)
 - [轮询与回复](./polling-and-reply.md)
 - [收发消息 API](../api/messaging.md)
+- [让 LLM 使用 wx-link](./index.md#让-llm-使用-wx-link)

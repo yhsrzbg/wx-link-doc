@@ -1,12 +1,17 @@
 import { defineConfig } from "vitepress";
 
 const base = process.env.GITHUB_ACTIONS ? "/wx-link-doc/" : "/";
+const llmsTxtUrl = `${base}llms.txt`;
 
 export default defineConfig({
   base,
   lang: "zh-CN",
   title: "wx-link",
   description: "wx-link 的 VitePress 文档站，涵盖接入 Guide 与 API Reference。",
+  head: [
+    ["link", { rel: "alternate", type: "text/markdown", href: llmsTxtUrl, title: "wx-link LLM context" }],
+    ["link", { rel: "llms-txt", href: llmsTxtUrl }],
+  ],
   cleanUrls: true,
   lastUpdated: true,
   themeConfig: {

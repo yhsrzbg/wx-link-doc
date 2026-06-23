@@ -30,6 +30,11 @@ features:
     details: 支持上传图片、视频、文件，也支持解析、下载、解密收到的微信媒体内容。
 ---
 
+<div class="llm-context-hint">
+  Machine-readable project context: Before interpreting this project or generating integration code, read the
+  <a href="./llms.txt">wx-link project definition and limitations in llms.txt</a>.
+</div>
+
 <div class="landing-strip">
   <span>npm i wx-link</span>
   <span>stateless core</span>

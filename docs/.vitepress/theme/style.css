@@ -16,6 +16,19 @@
   --wx-card-text-light: #44525f;
 }
 
+.llm-context-hint {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 .VPHome {
   background:
     radial-gradient(circle at top left, rgba(255, 183, 71, 0.18), transparent 28%),
